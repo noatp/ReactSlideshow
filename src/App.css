@@ -1,0 +1,120 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.err { color: #ff6b6b; margin: 8px; }
+
+main {
+  position: relative;
+  height: 100dvh; /* fallback next line for older browsers */
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate; /* contain stacking contexts */
+}
+
+/* Crossfade states with explicit stacking */
+section.hidden { opacity: 0; z-index: 1; pointer-events: none; }
+section.visible { opacity: 1; z-index: 2; pointer-events: auto; }
+
+section {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr;     /* default: 1-up */
+  grid-auto-rows: 100%;           /* each row fills the section height */
+  /* IMPORTANT: stretch grid items so the cell fills full width */
+  align-items: stretch;
+  justify-items: stretch;
+  transition: opacity 500ms ease;
+  will-change: opacity;           /* compositor hint for the crossfade */
+  transform: translateZ(0);       /* promote section to a layer */
+  backface-visibility: hidden;    /* reduce flicker */
+}
+
+/* Two-up layout with proper shrinking for portraits */
+section.two-up {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Allow grid items to actually shrink */
+section > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ----- Base cell ----- */
+.cell {
+  width: 100%;            /* <-- ensure grid item fills full column width */
+  height: 100%;           /* cell = full viewport height */
+  display: flex;
+  justify-content: center;
+  overflow: hidden;       /* crop transforms outside viewport */
+}
+
+/* ====== EXACT SIZING RULES ====== */
+
+/* TWO-UP: fill height (as before) */
+.two-up .cell { align-items: center; }
+.two-up .cell img {
+  height: 100%;           /* fill viewport height */
+  width: auto;            /* maintain aspect ratio */
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  backface-visibility: hidden;
+}
+
+/* SINGLE: fill width; vertical pan computed per image (no gaps) */
+.single .cell { align-items: flex-start; }  /* start at top edge */
+.single .cell img {
+  width: 100%;            /* <-- fill the entire viewport width */
+  height: auto;           /* maintain aspect ratio */
+  object-fit: contain;
+  object-position: top center;  /* top-aligned at start */
+  display: block;
+  backface-visibility: hidden;
+}
+
+/* -------- Vertical translate only (no zoom) --------
+   Travel distance is set inline via --kb-shift-px (JS), ensuring
+   exact bottom alignment at the end (no gaps).
+*/
+:root {
+  --kb-duration: 9800ms;  /* slightly < 5000ms rotation interval */
+}
+
+/* Animate only when we actually have travel to do */
+.single .cell img.kenburnsY {
+  will-change: transform;
+  animation: kb-vert var(--kb-duration) ease-in-out infinite alternate;
+}
+
+/* Pause animation for hidden section to save GPU/time */
+section.hidden img {
+  animation: none !important;
+}
+
+/* Translate from top (0) to bottom (-shift) — precise, no gaps */
+@keyframes kb-vert {
+  from { transform: translateY(0); }
+  to   { transform: translateY(calc(-1 * var(--kb-shift-px, 0px))); }
+}
+
+/* Reduce Motion */
+@media (prefers-reduced-motion: reduce) {
+  .kenburnsY { animation: none !important; }
+}
+
+/* body { overflow: hidden; } */
